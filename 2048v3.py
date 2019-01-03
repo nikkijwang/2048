@@ -21,17 +21,32 @@ bright_red = (255, 0, 0)
 bright_green = (0, 255, 0)
 bright_blue = (0, 0, 255)
 
+# ---------- Added Items ---------- #
+c2 = (66, 206, 244)
+c4 = (66, 188, 244)
+c8 = (66, 164, 244)
+c16 = (66, 137, 244)
+c32 = (66, 98, 244)
+c64 = (75, 66, 244)
+c128 = (60, 43, 242)
+c256 = (59, 15, 255)
+c512 = (49, 31, 244)
+c1024 = (57, 14, 247)
+c2048 = bright_blue
+# --------------------------------- #
+
 gameDisplay = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption("2048")
 clock = pygame.time.Clock()
 
-# -------------------- Added Item -------------------- #
 class game_2048:
 	def __init__(self, row, col):
 		self.row = row
 		self.col = col
 		self.gameData = np.full([row, col], None)
 		self.gameOver = False
+		self.tilesize = 100
+		self.margin = 1
 		self.initGame()
 
 	def initGame(self):
@@ -48,6 +63,8 @@ class game_2048:
 			if (self.gameData[row][col] == None):
 				self.gameData[row][col] = data
 				foundPos = True
+
+		self.drawBoard()
 
 	def slideUp(self):
 		# Slide all data up
@@ -174,7 +191,7 @@ class game_2048:
 
 	def checkValid(self, choice):
 		valid = False
-
+		# print("enters checkValid")
 		noneBeforeNum = False
 		sameNum = False
 
@@ -215,41 +232,128 @@ class game_2048:
 					valid = True
 					break
 
-	def makeMove(self):
+		# print("exit checkValid")
+		return valid
+
+	# -------------------- Modified Items -------------------- #
+	def makeMove(self, choice):
 		valid = False
+		#print("Enter makeMove")
+		if self.checkValid(choice):
+			if choice == 'w':
+				self.slideUp()
+			elif choice == 'a':
+				self.slideLeft()
+			elif choice == 's':
+				self.slideDown()
+			elif choice == 'd':
+				self.slideRight()
 
-		while not valid:
-			choice = input("Slide Direction: ")
+			self.genNewBlk()
+			self.checkContinue()
+		# while not valid and not self.gameOver:
+		# 	# choice = input("Slide Direction: ")
 
-			if self.checkValid(choice.lower()):
-				valid = True
+		# 	if self.checkValid(choice):
+		# 		valid = True
 
-				if choice.lower() == 'w':
-					self.slideUp()
-				elif choice.lower() == 'a':
-					self.slideLeft()
-				elif choice.lower() == 's':
-					self.slideDown()
-				elif choice.lower() == 'd':
-					self.slideRight()
+		# 		if choice == 'w':
+		# 			self.slideUp()
+		# 		elif choice == 'a':
+		# 			self.slideLeft()
+		# 		elif choice == 's':
+		# 			self.slideDown()
+		# 		elif choice == 'd':
+		# 			self.slideRight()
+
+		# 		self.genNewBlk()
+		# 		self.checkContinue()
+		#print("exit makeMove")
 
 	def checkContinue(self):
 		movePossible = False
 
 		for i in range(self.row):
 			for j in range(self.col - 1):
-				if self.gameData[i][j] == self.gameData[i][j + 1]:
+				# if self.gameData[i][j] is not None:
+				# 	print("gameData[%d][%d] = %d" % (i, j, self.gameData[i][j]))
+				# else:
+				# 	print("gameData[%d][%d] = %s" % (i, j, self.gameData[i][j]))
+				# if self.gameData[i][j + 1] is not None:
+				# 	print("gameData[%d][%d] = %d" % (i, j + 1, self.gameData[i][j + 1]))
+				# else:
+				# 	print("gameData[%d][%d] = %s" % (i, j + 1, self.gameData[i][j + 1]))
+				# if i != self.row - 1 and self.gameData[i + 1][j] is not None:
+				# 	print("gameData[%d][%d] = %d" % (i + 1, j, self.gameData[i + 1][j]))
+				# elif i != self.row - 1:
+				# 	print("gameData[%d][%d] = %s" % (i + 1, j, self.gameData[i + 1][j]))
+
+				if self.gameData[i][j] == self.gameData[i][j + 1] or self.gameData[i][j] == None or self.gameData[i][j + 1] == None:
 					movePossible = True
 					break
+
+
 				if i != self.row - 1:
-					if self.gameData[i][j] == self.gameData[i + 1][j]:
+					if self.gameData[i][j] == self.gameData[i + 1][j] or self.gameData[i + 1][j] == None:
 						movePossible = True
 						break
 			if movePossible:
 				break
 
+		# print(str(movePossible))
 		if not movePossible:
 			self.gameOver = True
+	
+	# ---------------- Added Items -------------------- #
+	def drawGrid(self):
+		pygame.draw.rect(gameDisplay, black, ((display_width/2) - (self.tilesize * 2), (display_height/2) - (self.tilesize * 2), self.tilesize * self.col, self.tilesize * self.row), 3)
+		pygame.draw.rect(gameDisplay, black, ((display_width/2) - (self.tilesize * 2), (display_height/2) - (self.tilesize * 2), self.tilesize * 4, self.tilesize), 3)
+		pygame.draw.rect(gameDisplay, black, ((display_width/2) - (self.tilesize * 2), (display_height/2), self.tilesize * 4, self.tilesize), 3)
+		pygame.draw.rect(gameDisplay, black, ((display_width/2) - (self.tilesize * 2), (display_height/2) - (self.tilesize * 2), self.tilesize, self.tilesize * 4), 3)
+		pygame.draw.rect(gameDisplay, black, ((display_width/2), (display_height/2) - (self.tilesize * 2), self.tilesize, self.tilesize * 4), 3)
+
+	def pickColor(self, data):
+		color = {
+			2: c2,
+			4: c4,
+			8: c8,
+			16: c16,
+			32: c32,
+			64: c64,
+			128: c128,
+			256: c256,
+			512: c512,
+			1024: c1024,
+			2048: c2048,
+			}
+
+		return color.get(data, black)
+
+	def drawBoard(self):
+		gameDisplay.fill(white)
+		drawGameTitle()
+		self.drawGrid()
+		for i in range(self.row):
+			for j in range(self.col):
+				x = (display_width / 2) + ((j - 2) * self.tilesize) + self.margin
+				y = (display_height / 2) + ((i - 2) * self.tilesize) + self.margin
+				data = self.gameData[i][j]
+
+				if data is not None:
+					text = data
+				else:
+					text = ' '
+
+				font = pygame.font.SysFont("impact", 20)
+				color = self.pickColor(data)
+				if data is not None:
+					pygame.draw.rect(gameDisplay, color, (x, y, self.tilesize - self.margin, self.tilesize - self.margin))
+				else:
+					pygame.draw.rect(gameDisplay, color, (x, y, self.tilesize, self.tilesize), self.margin)
+				tileSurf, tileRect = textObjects(str(text), font, black)
+				tileRect.center = (x + (self.tilesize / 2), y + (self.tilesize / 2))
+				gameDisplay.blit(tileSurf, tileRect)
+
 # ---------------------------------------------------- #
 
 def textObjects(text, font, color):
@@ -338,6 +442,13 @@ def gameInstr():
 		pygame.display.update()
 		clock.tick(15)
 
+# -------------------- Added Item -------------------- #
+def drawGameTitle():
+	largeText = pygame.font.SysFont("goudystout", 115)
+	TitleSurf, TitleRect = textObjects("2048", largeText, black)
+	TitleRect.center = ((display_width/2), 50)
+	gameDisplay.blit(TitleSurf, TitleRect)
+
 # -------------------- Updated item -------------------- #
 def gameLoop():
 	if pygame.mixer.music.get_busy():
@@ -347,30 +458,61 @@ def gameLoop():
 	pygame.mixer.music.play(-1)
 
 	gameExit = False
+	
+	row = 4
+	col = 4
+	game = game_2048(row, col)
 
-	while not gameExit:
+	while not gameExit and not game.gameOver:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				quit()
 
-		gameDisplay.fill(white)
-
-		# Title
-		largeText = pygame.font.SysFont("goudystout", 115)
-		TitleSurf, TitleRect = textObjects("2048", largeText, black)
-		TitleRect.center = ((display_width/2), 50)
-		gameDisplay.blit(TitleSurf, TitleRect)
-
-		# Grid box
-		pygame.draw.rect(gameDisplay, black, ((display_width/2) - 200, (display_height/2) - 200, 400, 400), 3)
-		pygame.draw.rect(gameDisplay, black, ((display_width/2) - 200, (display_height/2) - 200, 100, 400), 3)
-		pygame.draw.rect(gameDisplay, black, ((display_width/2), (display_height/2) - 200, 100, 400), 3)
-		pygame.draw.rect(gameDisplay, black, ((display_width/2) - 200, (display_height/2) - 200, 400, 100), 3)
-		pygame.draw.rect(gameDisplay, black, ((display_width/2) - 200, (display_height/2), 400, 100), 3)
+			if event.type == pygame.KEYUP:
+				# print(event)
+				if event.key == pygame.K_w or event.key == pygame.K_UP:
+					game.makeMove('w')
+				elif event.key == pygame.K_a or event.key == pygame.K_LEFT:
+					game.makeMove('a')
+				elif event.key == pygame.K_s or event.key == pygame.K_DOWN:
+					game.makeMove('s')
+				elif event.key == pygame.K_d or event.key == pygame.K_RIGHT:
+					game.makeMove('d')
 
 		pygame.display.update()
 		clock.tick(60)
+
+	if game.gameOver:
+		gameOver(game)
+
+# -------------------- Added Item -------------------- #
+def gameOver(game):
+	gameover = True
+
+	if pygame.mixer.music.get_busy():
+		pygame.mixer.music.stop()
+
+	end_bgm = pygame.mixer.music.load("C:/Users/Nikki Wang/Music/OK/Wiz Khalifa - See You Again (ft. Charlie Puth).mp3")
+	pygame.mixer.music.play(-1, 10)
+
+	while gameover:
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+				quit()
+
+		game.drawBoard()
+		largeText = pygame.font.SysFont("vinerhanditc", 115)
+		textSurf, textRect = textObjects("GAMEOVER", largeText, bright_red)
+		textRect.center = ((display_width/2), (display_height/2))
+		gameDisplay.blit(textSurf, textRect)
+
+		button("Play Again", 150, 450, 100, 50, green, bright_green, gameLoop)
+		button("Quit", 550, 450, 100, 50, red, bright_red, quitgame)
+
+		pygame.display.update()
+		clock.tick(15)
 
 # ------------------------------------------------------ #
 
