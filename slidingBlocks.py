@@ -1,337 +1,260 @@
-import pygame
 import numpy as np
+import pygame
 import random
 
 pygame.init()
 
-display_width = 800
-display_height = 600
-tilesize = 100
+dwidth = 800
+dheight = 600
+tsize = 100
 
 black = (0, 0, 0)
 white = (255, 255, 255)
+red = (255, 0, 0)
+green = (0, 255, 0)
+blue = (0, 0, 255)
 
-c2 = (66, 206, 244)
-c4 = (66, 188, 244)
-c8 = (66, 164, 244)
-c16 = (66, 137, 244)
-c32 = (66, 98, 244)
-c64 = (75, 66, 244)
-c128 = (60, 43, 242)
-c256 = (59, 15, 255)
-c512 = (49, 31, 244)
-c1024 = (57, 14, 247)
-c2048 = (0, 0, 255)
+UP = 'up'
+LEFT = 'left'
+DOWN = 'down'
+RIGHT = 'right'
 
-gameDisplay = pygame.display.set_mode((display_width, display_height))
-pygame.display.set_caption("Sliding Blocks")
-
-font = pygame.font.SysFont("impact", 20)
+gameDisplay = pygame.display.set_mode((dwidth, dheight))
+pygame.display.set_caption("Slide Animation")
 
 clock = pygame.time.Clock()
 
 row = 4
 col = 4
-gameData = np.full([row, col], None)
-dataMove = np.zeros([row, col], dtype = int)
-gameOver = False
+data = np.full([row,col], None)
+dataMove = np.zeros([row, col])
 
-def drawGrid():
-    pygame.draw.rect(gameDisplay, black, ((display_width/2) - 200, (display_height/2) - 200, 400, 400), 3)
-    pygame.draw.rect(gameDisplay, black, ((display_width/2) - 200, (display_height/2) - 200, 400, 100), 3)
-    pygame.draw.rect(gameDisplay, black, ((display_width/2) - 200, (display_height/2), 400, 100), 3)
-    pygame.draw.rect(gameDisplay, black, ((display_width/2) - 200, (display_height/2) - 200, 100, 400), 3)
-    pygame.draw.rect(gameDisplay, black, ((display_width/2), (display_height/2) - 200, 100, 400), 3)
-
-def textObjects(text):
-    textSurface = font.render(text, True, black)
-    return textSurface, textSurface.get_rect()
+font = pygame.font.SysFont("impact", 20)
 
 def pickColor(data):
     color = {
-        2: c2,
-        4: c4,
-        8: c8,
-        16: c16,
-        32: c32,
-        64: c64,
-        128: c128,
-        256: c256,
-        512: c512,
-        1024: c1024,
-        2048: c2048,
-        }
+        2: red,
+        4: green,
+        8: blue,
+    }
 
     return color.get(data, black)
 
-def shiftData(iLoop, i, j, availSpace, data, openSpace):
-    #print(iLoop)
-    if str(iLoop) == "row" or str(iLoop) == "row - 1":
+def shiftData(iloop, i, j, availspace, tile, openspace):
+    if str(iloop) == "row" or str(iloop) == "row - 1":
         space = i
     else:
         space = j
 
-    if not availSpace and data == None:
-        openSpace = space
-        availSpace = True
-    elif availSpace and data != None:
-        if str(iLoop) == "row" or str(iLoop) == "row - 1":
-            gameData[openSpace][j] = data
-            dataMove[i][j] += abs(openSpace - i)
+    if not availspace and tile == None:
+        openspace = space
+        availspace = True
+    elif availspace and tile != None:
+        if str(iloop) == "row" or str(iloop) == "row - 1":
+            data[i][openspace] = tile
+            dataMove[i][j] += abs(openspace - i)
         else:
-            # print("col or col - 1")
-            gameData[i][openSpace] = data
-            dataMove[i][j] += abs(openSpace - j)
+            data[i][openspace] = data
+            dataMove[i][j] += abs(openspace - j)
 
-        gameData[i][j] = None
+        data[i][j] = None
 
-        if str(iLoop) == "row" or str(iLoop) == "col":
-            openSpace += 1
+        if str(iloop) == "row" or str(iloop) == "col":
+            openspace += 1
         else:
-            openSpace -= 1
-    return availSpace, openSpace
+            openspace -= 1
 
-def slideUp():
-    openRow = None
+    return availspace, openspace
+
+def getTilePosition(i, j):
+    left = (i * tsize) + i - 1
+    top = (j * tsize) + j - 1
+    return left, top
+
+def drawTile(x, y, adjx = 0, adjy = 0):
+    left, top = getTilePosition(x, y)
+    tile = data[x][y]
+    color = pickColor(tile)
+    pygame.draw.rect(gameDisplay, color, (left, top, tsize, tsize))
+    textSurf, textRect = textObjects(str(tile))
+    textRect.center = (left + (tsize/2), top + (tsize/2))
+    gameDisplay.blit(textSurf, textRect)
+
+def clrMoves():
+    for i in range(row):
+        for j in range(col):
+            dataMove[i][j] = 0
+
+def animateUp(base, speed):
     for j in range(col):
-        availSpace = False
         for i in range(row):
-            #if not availSpace and gameData[i][j] == None:
-            #    openRow = i
-            #    availSpace = True
-            #elif availSpace and gameData[i][j] != None:
-            #    gameData[openRow][j] = gameData[i][j]
-            #    openRow += 1
-            #    gameData[i][j] = None
-            availSpace, openRow = shiftData("row", i, j, availSpace, gameData[i][j], openRow)
+            moves = dataMove[i][j]
+            if moves != 0:
+                for k in range(0, int(moves*tsize), speed):
+                    gameDisplay.blit(base, (0, 0))
+                    drawTile(i, j, 0, -k)
+                    pygame.display.update()
+                    clock.tick(60)
+
+    clrMoves()
+
+
+def slideAnimation(direction, animationSpeed):
+    # Copy the current board
+    drawBoard()
+    baseSurf = gameDisplay.copy()
+
+    # Shift data
+    if direction == UP:
+        slideup()
+    elif direction == LEFT:
+        slideleft()
+    elif direction == DOWN:
+        slidedown()
+    elif direction == RIGHT:
+        slideright()
+
+    # Draw blank space over moving tile
+    for i in range(row):
+        for j in range(col):
+            if data[i][j] == None:
+                left, top = getTilePosition(i, j)
+                pygame.draw.rect(baseSurf, black, (left, top, tsize, tsize))
+
+    # Animate sliding blocks
+    if direction == UP:
+        animateUp(baseSurf, animationSpeed)
+
+def slideup():
+    openrow = None
+    for j in range(col):
+        availspace = False
+        for i in range(row):
+            availspace, openrow = shiftData("row", i, j, availspace, data[i][j], openrow)
 
     for j in range(col):
         for i in range(row - 1):
-            if gameData[i][j] == gameData[i + 1][j] and gameData[i][j] != None:
-                gameData[i][j] *= 2
-                dataMove[i + j][j] += 1
-                gameData[i + 1][j] = None
+            if data[i][j] == data[i + 1][j] and data[i][j] != None:
+                data[i][j] *= 2
+                dataMove[i + 1][j] += 1
+                data[i + 1][j] = None
 
                 for k in range(i + 1, row - 1):
-                    gameData[k][j] = gameData[k + 1][j]
+                    data[k][j] = data[k + 1][j]
                     dataMove[k + 1][j] += 1
-                    gameData[k + 1][j] = None
+                    data[k + 1][j] = None
+
     print(dataMove)
 
-def slideLeft():
-    openCol = None
+def slideleft():
+    opencol = None
     for i in range(row):
-        availSpace = False
+        availspace = False
         for j in range(col):
-            availSpace, openCol = shiftData("col", i, j, availSpace, gameData[i][j], openCol)
-
+            availspace, opencol = shiftData("col", i, j, availspace, data[i][j], opencol)
+            
     for i in range(row):
-        for j in range(col - 1):
-            if gameData[i][j] == gameData[i][j + 1] and gameData[i][j] != None:
-                gameData[i][j] *= 2
-                gameData[i][j + 1] = None
+        for j in range(col -1):
+            if data[i][j] == data[i][j + 1] and data[i][j] != None:
+                data[i][j] *= 2
+                dataMove[i][j + 1] += 1
+                data[i][j+ 1] = None
 
                 for k in range(j + 1, col - 1):
-                    gameData[i][k] = gameData[i][k + 1]
-                    gameData[i][k + 1] = None
+                    data[i][k] = data[i][k + 1]
+                    dataMove[i][k + 1] += 1
+                    data[i][k + 1] = None
 
-def slideDown():
-    openRow = None
+def slidedown():
+    openrow = None
     for j in range(col):
-        availSpace = False
+        availspace = False
         for i in range(row - 1, -1, -1):
-            availSpace, openRow = shiftData("row - 1", i, j, availSpace, gameData[i][j], openRow)
+            availspace, openrow = shiftData("row - 1", i, j, availspace, data[i][j], openrow)
 
-    for j in range(col):
-        for i in range(row - 1, 0, -1):
-            if gameData[i][j] == gameData[i - 1][j] and gameData[i][j] != None:
-                gameData[i][j] *= 2
-                gameData[i - 1][j] = None
+        for j in range(col):
+            for i in range(row - 1, 0, -1):
+                if data[i][j] == data[i - 1][j] and data[i][j] != None:
+                    data[i][j] *= 2
+                    dataMove[i - 1][j] += 1
+                    data[i - 1][j] = None
 
-                for k in range(i - 1, 0, -1):
-                    gameData[k][j] = gameData[k - 1][j]
-                    gameData[k - 1][j] = None
+                    for k in range(i - 1, 0, -1):
+                        data[k][j] = data[k - 1][j]
+                        dataMove[k - 1][j] += 1
+                        data[k - 1][j] = None
 
-def slideRight():
-    openCol = None
+def slideright():
+    opencol = None
     for i in range(row):
-        availSpace = False
+        availspace = False
         for j in range(col - 1, -1, -1):
-            availSpace, openCol = shiftData("col - 1", i, j, availSpace, gameData[i][j], openCol)
+            availspace, opencol = shiftData("col - 1", i, j, availspace, data[i][j], opencol)
 
     for i in range(row):
         for j in range(col - 1, 0, -1):
-            if gameData[i][j] == gameData[i][j - 1] and gameData[i][j] != None:
-                gameData[i][j] *= 2
-                gameData[i][j - 1] = None
+            if data[i][j] == data[i][j - 1] and data[i][j] != None:
+                data[i][j] *= 2
+                dataMove[i][j - 1] += 1
+                data[i][j - 1] = None
 
                 for k in range(j - 1, 0, -1):
-                    gameData[i][k] = gameData[i][k - 1]
-                    gameData[i][k - 1] = None
+                    data[i][k] = data[i][k - 1]
+                    dataMove[i][k - 1] += 1
+                    data[i][k - 1] = None
 
 def genNewBlk():
-    global gameData
-
-    data = random.randint(1,2) * 2
-
+    tile = random.randint(1,2) * 2
     foundPos = False
 
     while not foundPos:
         row = random.randint(0, 3)
         col = random.randint(0, 3)
-        if (gameData[row][col] == None):
-            gameData[row][col] = data
+        if data[row][col] == None:
+            data[row][col] = tile
             foundPos = True
 
-    x = (display_width / 2) + ((col - 2) * tilesize)
-    y = (display_height / 2) + ((row - 2) * tilesize)
- 
-    # pygame.draw.rect(gameDisplay, color, (x, y, tilesize, tilesize))
-    # tileSurf, tileRect = textObjects(str(data))
-    # tileRect.center = (x + (tilesize/2), y + (tilesize/2))
-    # gameDisplay.blit(tileSurf, tileRect)
     drawBoard()
 
+def textObjects(text):
+    textSurface = font.render(text, True, white)
+    return textSurface, textSurface.get_rect()
+
 def drawBoard():
-    global gameData
     gameDisplay.fill(white)
+    pygame.draw.rect(gameDisplay, black, ((dwidth/2) - 200, (dheight/2) - 200, 400, 400), 3)
     for i in range(row):
         for j in range(col):
-            x = (display_width / 2) + ((j - 2) * tilesize)
-            y = (display_height / 2) + ((i - 2) * tilesize)
-            data = gameData[i][j]
-            color = pickColor(data)
+            x = (dwidth/2) + ((j - 2) * tsize)
+            y = (dheight/2) + ((i - 2) * tsize)
+            tile = data[i][j]
 
-            if data is not None:
-                text = data
+            if tile is not None:
+                color = red
+                text = tile
             else:
+                color = black
                 text = ' '
-                
-            pygame.draw.rect(gameDisplay, color, (x, y, tilesize, tilesize))
+
+            pygame.draw.rect(gameDisplay, color, (x, y, tsize, tsize))
             tileSurf, tileRect = textObjects(str(text))
-            tileRect.center = (x + (tilesize/2), y + (tilesize/2))
-            gameDisplay.blit(tileSurf, tileRect)
+            tileRect.center = (x + (tsize/2), y + (tsize/2))
+            gameDisplay.blit(tileSurf,tileRect)
 
-def checkData(i, j, pv, nbn, sameNum):
-    if gameData[i][j] == None:
-        pv = None
-    elif pv == None:
-        nbn = True
-        pv = gameData[i][j]
-    elif gameData[i][j] == pv:
-        sameNum = True
-    else:
-        pv = gameData[i][j]
-
-    return pv, nbn, sameNum
-
-def checkValid(choice):
-    valid = False
-
-    nbn = False
-    sameNum = False
-
-    if choice == 'w':
-        for j in range(col):
-            pv = 1
-            for i in range(row):
-                pv, nbn, sameNum = checkData(i, j, pv, nbn, sameNum)
-
-            if nbn or sameNum:
-                valid = True
-                break
-    elif choice == 'a':
-        for i in range(row):
-            pv = 1
-            for j in range(col):
-                pv, nbn, sameNum = checkData(i, j, pv, nbn, sameNum)
-
-            if nbn or sameNum:
-                valid = True
-                break
-    elif choice == 's':
-        for j in range(col):
-            pv = 1
-            for i in range(row - 1, -1, -1):
-                pv, nbn, sameNum = checkData(i, j, pv, nbn, sameNum)
-
-            if nbn or sameNum:
-                valid = True
-                break
-    elif choice == 'd':
-        for i in range(row):
-            pv = 1
-            for j in range(col - 1, -1, -1):
-                pv, nbn, sameNum = checkData(i, j, pv, nbn, sameNum)
-
-            if nbn or sameNum:
-                valid = True
-                break
-
-    return valid
-
-def checkContinue():
-    movePossible = False
-
-    for i in range(row):
-        for j in range(col - 1):
-            if gameData[i][j] == None or gameData[i][j + 1] == None or gameData[i][j] == gameData[i][j + 1]:
-                movePossible = True
-                break
-
-            if i != row - 1:
-                if gameData[i + 1][j] == None or gameData[i][j] == gameData[i + 1][j]:
-                    movePossible = True
-                    break
-        if movePossible:
-            break
-
-    if not movePossible:
-        gameOver = True
-
-def slideAnimation(board, direction, animationSpeed):
-    None
-
-def makeMove(choice):
-    valid = False
-
-    if checkValid(choice):
-        board = gameData
-        if choice == 'w':
-            slideUp()
-        elif choice == 'a':
-            slideLeft()
-        elif choice == 's':
-            slideDown()
-        elif choice == 'd':
-            slideRight()
-
-        genNewBlk()
-        checkContinue()
-
-def initGame():
-    for i in range(2):
-        genNewBlk()
 
 gameDisplay.fill(white)
-initGame()
 while True:
-    # gameDisplay.fill(white)
-    drawGrid()
+    drawBoard()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             quit()
 
         if event.type == pygame.KEYUP:
-            if event.key == pygame.K_w or event.key == pygame.K_UP:
-                makeMove('w')
-            elif event.key == pygame.K_a or event.key == pygame.K_LEFT:
-                makeMove('a')
-            elif event.key == pygame.K_s or event.key == pygame.K_DOWN:
-                makeMove('s')
-            elif event.key == pygame.K_d or event.key == pygame.K_RIGHT:
-                makeMove('d')
+            if event.key == pygame.K_SPACE:
+                genNewBlk()
+            elif event.key == pygame.K_w or event.key == pygame.K_UP:
+                slideAnimation(UP, 2)
 
     pygame.display.update()
     clock.tick(60)
